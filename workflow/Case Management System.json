@@ -1,0 +1,1002 @@
+{
+  "name": "Case Management System",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "case-intake",
+        "options": {}
+      },
+      "id": "redacted",
+      "name": "Webhook - Form Submission",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        312
+      ],
+      "webhookId": "redacted"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "caseSubject",
+              "value": "={{ $json.body.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "caseDescription",
+              "value": "={{ $json.body.message ?? $json.body.description ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "customerEmail",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "customerName",
+              "value": "={{ $json.body.name ?? \"Unknown\" }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "source",
+              "value": "webhook",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "receivedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "redacted",
+      "name": "Normalize Webhook Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        464,
+        312
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this customer case and classify it.\n\nSubject: {{ $json.caseSubject }}\nDescription: {{ $json.caseDescription }}\nCustomer: {{ $json.customerName }} ({{ $json.customerEmail }})\n\nClassify the case into exactly one of these categories:\n- invoice\n- technical\n- hr\n- support\n- general\n\nSet priority to exactly one of:\n- low\n- medium\n- high\n- urgent\n\nCompleteness rules:\nA case is complete if it has enough information to be routed to the correct team.\n\nSet isComplete to true if the case includes:\n- customer name\n- customer email\n- subject\n- a meaningful issue description\n\nDo not mark a case as incomplete only because extra troubleshooting details would be helpful.\n\nOptional details such as browser, device, screenshots, recent account changes, exact reproduction steps, or additional context can be mentioned in nextStep, but they should not be added to missingInfo unless they are absolutely required to understand or route the case.\n\nSet isComplete to false only if:\n- customer email is missing\n- subject is missing\n- the description is too vague to understand the issue\n- the case cannot be routed to a team based on the available information\n\nPriority rules:\n- urgent: severe outage, security issue, payment-blocking issue, or business-critical production issue\n- high: login/access issues, payment issues, customer-impacting technical blockers\n- medium: normal support request or non-critical technical issue\n- low: general question or low-impact request\n\nProvide:\n- category\n- priority\n- brief summary in 1-2 sentences\n- suggested nextStep\n- isComplete as true or false\n- missingInfo as an array\n\nIf isComplete is true, missingInfo must be an empty array.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a case classification expert. Analyze customer inquiries and categorize them accurately."
+        }
+      },
+      "id": "redacted",
+      "name": "AI Case Classifier",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        688,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"category\":\"technical\",\"priority\":\"high\",\"summary\":\"Customer cannot access portal after password reset\",\"nextStep\":\"Escalate to technical support team\",\"isComplete\":false,\"missingInfo\":[\"error message details\",\"browser information\"]}"
+      },
+      "id": "redacted",
+      "name": "Case Classification Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        824,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "caseId",
+              "value": "={{ $now.toMillis() }}-{{ $('Normalize Webhook Data').item.json.customerEmail ?? $('Normalize Email Data').item.json.customerEmail.split(\"@\")[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "subject",
+              "value": "={{ $('Normalize Webhook Data').item.json.caseSubject ?? $('Normalize Email Data').item.json.caseSubject }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "description",
+              "value": "={{ $('Normalize Webhook Data').item.json.caseDescription ?? $('Normalize Email Data').item.json.caseDescription }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "customerEmail",
+              "value": "={{ $('Normalize Webhook Data').item.json.customerEmail ?? $('Normalize Email Data').item.json.customerEmail }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "customerName",
+              "value": "={{ $('Normalize Webhook Data').item.json.customerName ?? $('Normalize Email Data').item.json.customerName }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "source",
+              "value": "={{ $('Normalize Webhook Data').item.json.source ?? $('Normalize Email Data').item.json.source }}",
+              "type": "string"
+            },
+            {
+              "id": "7",
+              "name": "receivedAt",
+              "value": "={{ $('Normalize Webhook Data').item.json.receivedAt ?? $('Normalize Email Data').item.json.receivedAt }}",
+              "type": "string"
+            },
+            {
+              "id": "8",
+              "name": "category",
+              "value": "={{ $('AI Case Classifier').item.json.output.category }}",
+              "type": "string"
+            },
+            {
+              "id": "9",
+              "name": "priority",
+              "value": "={{ $('AI Case Classifier').item.json.output.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "10",
+              "name": "summary",
+              "value": "={{ $('AI Case Classifier').item.json.output.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "11",
+              "name": "nextStep",
+              "value": "={{ $('AI Case Classifier').item.json.output.nextStep }}",
+              "type": "string"
+            },
+            {
+              "id": "12",
+              "name": "isComplete",
+              "value": "={{ $('AI Case Classifier').item.json.output.isComplete }}",
+              "type": "boolean"
+            },
+            {
+              "id": "13",
+              "name": "missingInfo",
+              "value": "={{ $('AI Case Classifier').item.json.output.missingInfo }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "redacted",
+      "name": "Merge Classification Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        408
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ Boolean($json.customerName && $json.customerEmail && $json.subject && $json.description && $json.description.trim().length >= 20) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "redacted",
+      "name": "Check Case Completeness",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1264,
+        408
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "redacted",
+          "mode": "list",
+          "cachedResultName": "Cases",
+          "cachedResultUrl": "redacted"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "source": "={{ $json.source }}",
+            "category": "={{ $json.category }}",
+            "priority": "={{ $json.priority }}",
+            "summary": "={{ $json.summary }}",
+            "status": "complete",
+            "ai_confidence": 0,
+            "review_required": false
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "case_id",
+              "displayName": "case_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "missing_fields",
+              "displayName": "missing_fields",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "assigned_team",
+              "displayName": "assigned_team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "requester_email",
+              "displayName": "requester_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_confidence",
+              "displayName": "ai_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "review_required",
+              "displayName": "review_required",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "redacted",
+      "name": "Log Complete Case",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1488,
+        312
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "redacted",
+          "mode": "id"
+        },
+        "text": "=✅ New complete case assigned\n\nCase ID: {{ $('Merge Classification Data').item.json.caseId }}\n\nCustomer: {{ $('Merge Classification Data').item.json.customerName }} ({{ $('Merge Classification Data').item.json.customerEmail }})\n\nCategory: {{ $('Merge Classification Data').item.json.category }}\n\nPriority: {{ $('Merge Classification Data').item.json.priority }}\n\nSummary: {{ $('Merge Classification Data').item.json.summary }}\n\nNext Step: {{ $('Merge Classification Data').item.json.nextStep }}\n\nReceived: {{ $('Merge Classification Data').item.json.receivedAt }}",
+        "otherOptions": {}
+      },
+      "id": "redacted",
+      "name": "Notify Team - Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1712,
+        312
+      ],
+      "webhookId": "redacted",
+      "credentials": {
+        "slackApi": {
+          "id": "redacted",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "redacted",
+          "mode": "list",
+          "cachedResultName": "Cases",
+          "cachedResultUrl": "redacted"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "source": "={{ $json.source }}",
+            "category": "=\n{{ $json.category || 'Uncategorized' }}",
+            "priority": "=\n{{ $json.priority || 'Medium' }}",
+            "summary": "={{ $json.summary || $json.description }}",
+            "status": "needs_review",
+            "ai_confidence": "={{ $json.aiConfidence || 0 }}",
+            "case_id": "=\n{{ $json.caseId }}",
+            "missing_fields": "={{ Array.isArray($json.missingInfo) ? $json.missingInfo.join(', ') : ($json.missingInfo || 'Manual review required') }}",
+            "assigned_team": "={{ $json.assignedTeam || 'Support' }}",
+            "requester_email": "={{ $json.customerEmail }}",
+            "created_at": "=\n{{ $json.receivedAt || $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "case_id",
+              "displayName": "case_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "missing_fields",
+              "displayName": "missing_fields",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "assigned_team",
+              "displayName": "assigned_team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "requester_email",
+              "displayName": "requester_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_confidence",
+              "displayName": "ai_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "review_required",
+              "displayName": "review_required",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "redacted",
+      "name": "Log Incomplete Case",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1488,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "redacted",
+        "subject": "=Case Needs Review: {{ $(\"Merge Classification Data\").item.json.subject }}",
+        "message": "=Case ID: {{ $(\"Merge Classification Data\").item.json.caseId }}  Customer: {{ $(\"Merge Classification Data\").item.json.customerName }} ({{ $(\"Merge Classification Data\").item.json.customerEmail }})  Category: {{ $(\"Merge Classification Data\").item.json.category || 'Uncategorized' }}  Priority: {{ $(\"Merge Classification Data\").item.json.priority || 'Medium' }}  Summary: {{ $(\"Merge Classification Data\").item.json.summary || $(\"Merge Classification Data\").item.json.description }}  Missing Information: {{ Array.isArray($(\"Merge Classification Data\").item.json.missingInfo) ? $(\"Merge Classification Data\").item.json.missingInfo.join(', ') : ($(\"Merge Classification Data\").item.json.missingInfo || 'Not specified') }}  Next Step: {{ $(\"Merge Classification Data\").item.json.nextStep || 'Review manually' }}  Received: {{ $(\"Merge Classification Data\").item.json.receivedAt }}",
+        "options": {}
+      },
+      "id": "redacted",
+      "name": "Notify - Email Review",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1712,
+        504
+      ],
+      "webhookId": "redacted",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "redacted",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "to:support@company.com",
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "id": "redacted",
+      "name": "Gmail - Email Cases",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        504
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "redacted",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "caseSubject",
+              "value": "={{ $json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "caseDescription",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "customerEmail",
+              "value": "={{ $json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "customerName",
+              "value": "={{ $json.from.split(\"@\")[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "source",
+              "value": "email",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "receivedAt",
+              "value": "={{ $json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "7",
+              "name": "emailId",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "redacted",
+      "name": "Normalize Email Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        464,
+        504
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "redacted",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "redacted",
+          "mode": "list",
+          "cachedResultName": "WorkflowErrors",
+          "cachedResultUrl": "redacted"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "errorTime": "={{ $now.toISO() }}",
+            "workflowId": "={{ $json.workflow.id }}",
+            "workflowName": "={{ $json.workflow.name }}",
+            "executionId": "={{ $json.execution.id }}",
+            "errorMessage": "={{ $json.execution.error.message }}",
+            "errorStack": "={{ $json.execution.error.stack }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "redacted",
+      "name": "Log Error to Data Table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "redacted",
+          "mode": "id"
+        },
+        "messageType": "block",
+        "blocksUi": "={{ [{\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \"⚠️ Workflow Error\"}}, {\"type\": \"section\", \"fields\": [{\"type\": \"mrkdwn\", \"text\": \"*Workflow:*\\n\" + $('Error Trigger').item.json.workflow.name}, {\"type\": \"mrkdwn\", \"text\": \"*Execution ID:*\\n\" + $('Error Trigger').item.json.execution.id}]}, {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Error:*\\n```\" + $('Error Trigger').item.json.execution.error.message + \"```\"}}, {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"Time: \" + $now.toISO()}]}] }}",
+        "text": "=Workflow error occurred",
+        "otherOptions": {}
+      },
+      "id": "redacted",
+      "name": "Notify Error - Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        688,
+        736
+      ],
+      "webhookId": "redacted",
+      "credentials": {
+        "slackApi": {
+          "id": "redacted",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 📋 Case Management System\n\n**Purpose:** Automated case intake, classification, routing, and logging\n\n**Flow:**\n1. Cases arrive via Webhook or Gmail\n2. Data normalized to common format\n3. AI classifies category, priority, completeness\n4. Complete cases → logged & routed to team\n5. Incomplete cases → flagged for review\n6. Notifications sent via Slack/Email",
+        "height": 400,
+        "width": 600,
+        "color": 2
+      },
+      "id": "redacted",
+      "name": "Sticky Note 51102427",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        848,
+        -1280
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🤖 AI Classification\n\nUses GPT-4 Mini with structured output to:\n- Categorize cases (invoice, technical, HR, support, general)\n- Assign priority (low, medium, high, urgent)\n- Summarize the issue\n- Suggest next steps\n- Detect missing information",
+        "height": 650,
+        "width": 500,
+        "color": 4
+      },
+      "id": "redacted",
+      "name": "Sticky Note 953eec79",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        -1296
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ Error Handling\n\nSeparate error workflow catches failures:\n- Logs errors to Data Table\n- Sends Slack alerts to ops team\n- Preserves error details for debugging",
+        "height": 200,
+        "width": 900
+      },
+      "id": "redacted",
+      "name": "Sticky Note 1485ca30",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        2272
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "redacted",
+      "name": "OpenAI GPT-4o Mini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        656,
+        528
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "redacted",
+          "name": "OpenAI account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Form Submission": {
+      "main": [
+        [
+          {
+            "node": "Normalize Webhook Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Webhook Data": {
+      "main": [
+        [
+          {
+            "node": "AI Case Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Case Classifier": {
+      "main": [
+        [
+          {
+            "node": "Merge Classification Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Case Classification Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Case Classifier",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Classification Data": {
+      "main": [
+        [
+          {
+            "node": "Check Case Completeness",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Case Completeness": {
+      "main": [
+        [
+          {
+            "node": "Log Complete Case",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Incomplete Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Complete Case": {
+      "main": [
+        [
+          {
+            "node": "Notify Team - Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Incomplete Case": {
+      "main": [
+        [
+          {
+            "node": "Notify - Email Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Email Cases": {
+      "main": [
+        [
+          {
+            "node": "Normalize Email Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Email Data": {
+      "main": [
+        [
+          {
+            "node": "AI Case Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Data Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error to Data Table": {
+      "main": [
+        [
+          {
+            "node": "Notify Error - Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT-4o Mini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Case Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "redacted",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "redacted"
+  },
+  "id": "redacted",
+  "tags": []
+}

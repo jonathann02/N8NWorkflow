@@ -1,0 +1,10 @@
+.env
+.env.*
+*.secret
+*.key
+*.pem
+*.p12
+credentials/
+n8n-credentials*.json
+*.log
+.DS_Store
