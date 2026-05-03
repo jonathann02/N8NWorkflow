@@ -13,3 +13,9 @@ Under projektet stötte jag på flera typiska problem som kan uppstå i automati
 - Slack Blocks gav syntaxfel, så jag förenklade notifieringen till ett vanligt textmeddelande för bättre stabilitet.
 
 Den viktigaste lärdomen var att ett fungerande RPA-flöde behöver tydliga dataformat mellan varje steg, stabil felhantering och regler för alla beslut. 
+
+
+
+Mer bilder finns under /screenshots
+
+<img width="2048" height="1158" alt="image" src="https://github.com/user-attachments/assets/4d5de0a7-18a2-440a-92b3-da9f0c8fb4d9" />
