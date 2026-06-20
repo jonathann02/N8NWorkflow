@@ -1,4 +1,4 @@
-Byggde ett AI-assisterat RPA-liknande n8n-workflow för ärendehantering där inkommande ärenden normaliseras, klassificeras med AI, valideras med regelbaserad completeness check, loggas i data table och routas till Slack eller manuell e-postgranskning. Implementerade även separat error workflow för felsökning och spårbarhet. 
+Byggde ett AI-assisterat n8n-workflow för ärendehantering där inkommande ärenden normaliseras, klassificeras med AI, valideras med regelbaserad completeness check, loggas i data table och routas till Slack eller manuell e-postgranskning. Implementerade även separat error workflow för felsökning och spårbarhet. 
 
 
 
